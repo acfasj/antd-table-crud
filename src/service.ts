@@ -82,20 +82,20 @@ export async function getPosts(dto: GetPostsDto = {}): Promise<TableListResponse
   await delay()
   const start = (page - 1) * pageSize
   const end = start + pageSize
-  let list = allPosts.slice(start, end)
+  let filteredList = allPosts.concat()
   if (title) {
-    list = list.filter((item) => item.title.includes(title))
+    filteredList = filteredList.filter((item) => item.title.includes(title))
   }
   if (status) {
-    list = list.filter((item) => item.status === status)
+    filteredList = filteredList.filter((item) => item.status === status)
   }
   if (order || order === 0) {
-    list = list.sort((a, b) => (order === 0 ? a.order - b.order : b.order - a.order))
+    filteredList.sort((a, b) => (order === 0 ? a.order - b.order : b.order - a.order))
   }
   const ret = {
-    list,
+    list: filteredList.slice(start, end),
     pagination: {
-      total: allPosts.length,
+      total: filteredList.length,
       page,
       pageSize,
     },

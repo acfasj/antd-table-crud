@@ -72,7 +72,7 @@ type GetPosts = (dto?: GetPostsDto) => Promise<TableListResponse<Post>>
 ```tsx
 const columns: ColumnProps<Post>[] = [
   { dataIndex: 'id', title: 'id' },
-  { dataIndex: 'title', title: 'name' },
+  { dataIndex: 'title', title: 'title' },
   { dataIndex: 'content', title: 'content' },
   { dataIndex: 'status', title: 'status' },
   { dataIndex: 'order', title: 'order' },
@@ -165,3 +165,102 @@ onChange={(pagination) => {
 当然, 如果只是关心分页的变化的话, 也可以在 Table 组件的 pagination 配置里监听分页的 onChange 函数, 而不是整个 table 的 onChange 函数
 
 到这里, 页面的基本展示就完成了, 可以访问[https://codesandbox.io/s/smoosh-bash-pe3l3?file=/src/App.tsx](https://codesandbox.io/s/smoosh-bash-pe3l3?file=/src/App.tsx)来查看在线的 demo
+
+## 顶部搜索表单
+
+假设我们可以根据文章标题来进行模糊搜索, 需要在 table 上方添加一个输入框
+更新搜索参数 `GetPostsDto`的类型定义为
+
+```tsx
+export interface GetPostsDto {
+  /** @default 1 */
+  page?: number
+  /** @default 20 */
+  pageSize?: number
+  title?: string
+}
+```
+
+接着使用 antd 的 Form 组件来创建一个业务表单组件, 取名为 SearchForm
+
+```tsx
+interface FormValues {
+  title?: string
+}
+export function SearchForm(props: {
+  onSubmit: (values: FormValues) => any
+  onReset: (values: FormValues) => any
+}) {
+  const { onSubmit, onReset } = props
+  const [form] = Form.useForm<FormValues>()
+  const handleReset = () => {
+    form.resetFields()
+    onReset({ title: undefined })
+  }
+  return (
+    <Form form={form} layout='inline' onFinish={onSubmit}>
+      <Form.Item name='title' label='标题'>
+        <Input placeholder='文章标题' />
+      </Form.Item>
+      <Button htmlType='submit' type='primary'>
+        搜索
+      </Button>
+      <Button htmlType='button' onClick={handleReset}>
+        重置
+      </Button>
+    </Form>
+  )
+}
+```
+
+我们希望用户点击搜索或者重置的时候, 都重新发起请求来刷新 table 的数据. 显然我们又需要修改 `query` 这个 state
+
+```tsx
+<SearchForm
+  onSubmit={(values) =>
+    setQuery((prev) => ({
+      ...prev,
+      ...values,
+      page: 1, // 重置分页
+    }))
+  }
+  onReset={(values) =>
+    setQuery((prev) => ({
+      ...prev,
+      ...values,
+      page: 1, // 重置分页
+    }))
+  }
+/>
+```
+
+注意这里, 我们用了 setQuery 传递了一个函数, 同时结合展开运算符, 达到了 Class Component 里 this.setState 合并更新对象的效果, 参考[React 文档](https://zh-hans.reactjs.org/docs/hooks-reference.html#usestate)
+因为, 我们不希望点击搜索传递了`title`参数时, 就把之前可能已经存在的 `pageSize` 等参数丢掉
+
+同理, table 里的 onChange 函数也要进行同样的操作, 不能因为切换分页就把可能已经存在的`title`参数丢了
+
+```tsx
+onChange={(pagination) => {
+  setQuery((prev) => ({
+    ...prev,
+    page: pagination.current || 1,
+    pageSize: pagination.pageSize || 20
+  }));
+}}
+```
+这个时候给表格大概是长这样的
+![](./screenshots/141603520105_.pic.jpg)
+查看在线 demo [https://codesandbox.io/s/great-black-6mvm2?file=/src/App.tsx](https://codesandbox.io/s/great-black-6mvm2?file=/src/App.tsx)
+
+### 表单校验
+接着, 来思考一个有趣的问题. 假设这个title的输入框, 用户输入一个超长的字符串, 那么前端要做一些限制吗? 不同的应用可能有不同的答案
+
+- 像谷歌的搜索框, 我试了最多只能输入2048个字符, 因为它会把这个搜索的字符串加到url里, url显然是有长度限制的(具体看实现), 所以也很合理.B站的搜索框也做了类似的处理, 但是限制在了100个字符
+- 阿里云的用户中心里, 对于订单号这个input, 前端并没有做长度上的校验/过滤, 而是直接丢给后端, 然后后管返回系统异常前端弹窗提示
+- 我平时的工作里, 后台管理系统中, 产品要求直接崩掉这次操作, 给用户提示字符过长之类的
+
+个人来看的话, 我觉得直接过滤掉用户的输入/限制用户的输入, 但是不崩掉用户的请求会比较好. 比如说 “输入框输入n个字符串就不能再输入”, “数字id输入框就只能输入数字”, “antd的InputNumber可以输入别的字符, 但是blur或者提交的时候会清掉”, “合理的情况下使用可以选择的空间而不是输入框(Select, Picker, 带搜索的Select等)”.
+
+### 输入了, 但是没有点击搜索
+假设一个用户更新了输入框, 但是没有点击搜索按钮, 这时候用户点击下一页等时候, 我应该带上视觉上已经更新了的title参数吗?
+纠结过一下后我还是觉得这是用户傻逼, 你不点击搜索来提交我为什么要带, 而且带的话我是不是又要考虑一下表单校验怎么处理? 带了以后页码溢出怎么处理(下面会讨论页码溢出的情况)? 但是还是得看产品选择怎么搞了

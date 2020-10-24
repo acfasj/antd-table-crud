@@ -4,10 +4,11 @@ import { ColumnProps } from 'antd/lib/table'
 import './App.css'
 import { Post, getPosts, TableListResponse, GetPostsDto } from './service'
 import { antdPaginationAdapter } from './utils'
+import { SearchForm } from './search-form'
 
 const columns: ColumnProps<Post>[] = [
   { dataIndex: 'id', title: 'id' },
-  { dataIndex: 'title', title: 'name' },
+  { dataIndex: 'title', title: 'title' },
   { dataIndex: 'content', title: 'content' },
   { dataIndex: 'status', title: 'status' },
   { dataIndex: 'order', title: 'order' },
@@ -50,6 +51,22 @@ function App() {
   return (
     <div>
       <h1>antd table crud</h1>
+      <SearchForm
+        onSubmit={(values) =>
+          setQuery((prev) => ({
+            ...prev,
+            ...values,
+            page: 1, // 重置分页
+          }))
+        }
+        onReset={(values) =>
+          setQuery((prev) => ({
+            ...prev,
+            ...values,
+            page: 1, // 重置分页
+          }))
+        }
+      />
       <Table
         rowKey='id'
         dataSource={data.list}
@@ -57,10 +74,11 @@ function App() {
         loading={loading}
         pagination={{ ...antdPaginationAdapter(data.pagination) }}
         onChange={(pagination) => {
-          setQuery({
+          setQuery((prev) => ({
+            ...prev,
             page: pagination.current || 1,
             pageSize: pagination.pageSize || 20,
-          })
+          }))
         }}
       ></Table>
     </div>
