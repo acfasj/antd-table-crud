@@ -10,9 +10,17 @@ const columns: ColumnProps<Post>[] = [
   { dataIndex: 'id', title: 'id' },
   { dataIndex: 'title', title: 'title' },
   { dataIndex: 'content', title: 'content' },
-  { dataIndex: 'status', title: 'status' },
-  { dataIndex: 'order', title: 'order' },
-  { dataIndex: 'createdAt', title: 'createdAt' },
+  {
+    dataIndex: 'status',
+    title: 'status',
+    filters: [
+      { text: '0', value: 0 },
+      { text: '1', value: 1 },
+    ],
+    filterMultiple: false,
+  },
+  { dataIndex: 'order', title: 'order', sorter: true },
+  { dataIndex: 'createdAt', title: 'createdAt', sorter: true },
   { dataIndex: 'updatedAt', title: 'updatedAt' },
   {
     title: '操作',
@@ -73,11 +81,17 @@ function App() {
         columns={columns}
         loading={loading}
         pagination={{ ...antdPaginationAdapter(data.pagination) }}
-        onChange={(pagination) => {
+        onChange={(pagination, filters, sorter) => {
           setQuery((prev) => ({
             ...prev,
             page: pagination.current || 1,
             pageSize: pagination.pageSize || 20,
+            status:
+              filters.status && filters.status.length > 0 ? Number(filters.status[0]) : undefined,
+            order:
+              !Array.isArray(sorter) && !!sorter.order && sorter.field === 'order'
+                ? ({ ascend: 0, descend: 1 } as const)[sorter.order]
+                : undefined,
           }))
         }}
       ></Table>

@@ -248,19 +248,99 @@ onChange={(pagination) => {
   }));
 }}
 ```
+
 这个时候给表格大概是长这样的
 ![](./screenshots/141603520105_.pic.jpg)
 查看在线 demo [https://codesandbox.io/s/great-black-6mvm2?file=/src/App.tsx](https://codesandbox.io/s/great-black-6mvm2?file=/src/App.tsx)
 
 ### 表单校验
-接着, 来思考一个有趣的问题. 假设这个title的输入框, 用户输入一个超长的字符串, 那么前端要做一些限制吗? 不同的应用可能有不同的答案
 
-- 像谷歌的搜索框, 我试了最多只能输入2048个字符, 因为它会把这个搜索的字符串加到url里, url显然是有长度限制的(具体看实现), 所以也很合理.B站的搜索框也做了类似的处理, 但是限制在了100个字符
-- 阿里云的用户中心里, 对于订单号这个input, 前端并没有做长度上的校验/过滤, 而是直接丢给后端, 然后后管返回系统异常前端弹窗提示
+接着, 来思考一个有趣的问题. 假设这个 title 的输入框, 用户输入一个超长的字符串, 那么前端要做一些限制吗? 不同的应用可能有不同的答案
+
+- 像谷歌的搜索框, 我试了最多只能输入 2048 个字符, 因为它会把这个搜索的字符串加到 url 里, url 显然是有长度限制的(具体看实现), 所以也很合理.B 站的搜索框也做了类似的处理, 但是限制在了 100 个字符
+- 阿里云的用户中心里, 对于订单号这个 input, 前端并没有做长度上的校验/过滤, 而是直接丢给后端, 然后后管返回系统异常前端弹窗提示
 - 我平时的工作里, 后台管理系统中, 产品要求直接崩掉这次操作, 给用户提示字符过长之类的
 
-个人来看的话, 我觉得直接过滤掉用户的输入/限制用户的输入, 但是不崩掉用户的请求会比较好. 比如说 “输入框输入n个字符串就不能再输入”, “数字id输入框就只能输入数字”, “antd的InputNumber可以输入别的字符, 但是blur或者提交的时候会清掉”, “合理的情况下使用可以选择的空间而不是输入框(Select, Picker, 带搜索的Select等)”.
+个人来看的话, 我觉得直接过滤掉用户的输入/限制用户的输入, 但是不崩掉用户的请求会比较好. 比如说 “输入框输入 n 个字符串就不能再输入”, “数字 id 输入框就只能输入数字”, “antd 的 InputNumber 可以输入别的字符, 但是 blur 或者提交的时候会清掉”, “合理的情况下使用可以选择的空间而不是输入框(Select, Picker, 带搜索的 Select 等)”.
 
 ### 输入了, 但是没有点击搜索
-假设一个用户更新了输入框, 但是没有点击搜索按钮, 这时候用户点击下一页等时候, 我应该带上视觉上已经更新了的title参数吗?
+
+假设一个用户更新了输入框, 但是没有点击搜索按钮, 这时候用户点击下一页等时候, 我应该带上视觉上已经更新了的 title 参数吗?
 纠结过一下后我还是觉得这是用户傻逼, 你不点击搜索来提交我为什么要带, 而且带的话我是不是又要考虑一下表单校验怎么处理? 带了以后页码溢出怎么处理(下面会讨论页码溢出的情况)? 但是还是得看产品选择怎么搞了
+
+## 筛选和排序
+
+假设我们可以根据文章状态来在表格列进行筛选, 并且可以根据 Post 的 order 字段来排序
+更新搜索参数 `GetPostsDto`的类型定义为
+
+```tsx
+export interface GetPostsDto {
+  /** @default 1 */
+  page?: number
+  /** @default 20 */
+  pageSize?: number
+  title?: string
+  /** 0升序 1降序 */
+  order?: 0 | 1
+  status?: PostStatus
+}
+```
+
+可以看到, 对于接口来说 , 没有上面不同的, 就是加了两个字段而已; 那么对于前端来讲, 也没什么不同的, 就是搜索参数来自于不同的 UI 控件而已, 对于到代码还是那一句 `setQuery`
+
+更新 columns status 那一栏
+
+```tsx
+  {
+    dataIndex: "status",
+    title: "status",
+    filters: [
+      { text: "0", value: 0 },
+      { text: "1", value: 1 },
+    ],
+    filterMultiple: false,
+  },
+```
+
+同时, 对应的 table 的 onChange 函数也更新一下. 同时因为这里使用了 antd 的 table, 得对它给我们的一些数据结构进行一下处理, 让它符合接口的规范
+
+```tsx
+  onChange={(pagination, filters) => {
+  setQuery((prev) => ({
+    ...prev,
+    page: pagination.current || 1,
+    pageSize: pagination.pageSize || 20,
+    status:
+      filters.status && filters.status.length > 0 ? Number(filters.status[0]) : undefined,
+  }))
+}}
+```
+
+排序也差不多
+
+```tsx
+{ dataIndex: 'order', title: 'order', sorter: true },
+
+
+onChange={(pagination, filters, sorter) => {
+  setQuery((prev) => ({
+    ...prev,
+    page: pagination.current || 1,
+    pageSize: pagination.pageSize || 20,
+    status:
+      filters.status && filters.status.length > 0 ? Number(filters.status[0]) : undefined,
+    order:
+      !Array.isArray(sorter) && !!sorter.order && sorter.field === 'order'
+        ? ({ ascend: 0, descend: 1 } as const)[sorter.order]
+        : undefined,
+  }))
+}}
+```
+
+这时候数据结构就有点恶心了, 要转来转去. 没办法, ui 要用的数据接口和接口要用的数据结构, 用途都不一样那就很难一致. 至于多列排序也是类似的, 就是处理的 sorter 变成一个数组而已
+
+这个时候表格大概是长这个样子的
+
+![](./screenshots/151603526159_.pic.jpg)
+
+查看在线 demo [https://codesandbox.io/s/async-moon-vjllu?file=/src/App.tsx](https://codesandbox.io/s/async-moon-vjllu?file=/src/App.tsx)

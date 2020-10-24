@@ -52,7 +52,7 @@ export interface GetPostsDto {
   page?: number
   /** @default 20 */
   pageSize?: number
-  /** 0降序 1升序 */
+  /** 0升序 1降序 */
   order?: 0 | 1
   status?: PostStatus
   title?: string
@@ -86,7 +86,7 @@ export async function getPosts(dto: GetPostsDto = {}): Promise<TableListResponse
   if (title) {
     filteredList = filteredList.filter((item) => item.title.includes(title))
   }
-  if (status) {
+  if (status || status === 0) {
     filteredList = filteredList.filter((item) => item.status === status)
   }
   if (order || order === 0) {
