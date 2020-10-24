@@ -10,3 +10,12 @@ export function antdPaginationAdapter(apiPagination: APIPagination) {
     },
   }
 }
+
+export function validIntOrUndefiend(value: any) {
+  const num = Number.parseInt(value, 10)
+  return !Number.isNaN(num) ? num : undefined
+}
+
+export function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}

@@ -286,7 +286,7 @@ export interface GetPostsDto {
 }
 ```
 
-可以看到, 对于接口来说 , 没有上面不同的, 就是加了两个字段而已; 那么对于前端来讲, 也没什么不同的, 就是搜索参数来自于不同的 UI 控件而已, 对于到代码还是那一句 `setQuery`
+可以看到, 对于接口来说 , 没有什么不同的, 就是加了两个字段而已; 那么对于前端来讲, 也没什么不同的, 就是搜索参数来自于不同的 UI 控件而已, 对于到代码还是那一句 `setQuery`
 
 更新 columns status 那一栏
 
@@ -344,3 +344,139 @@ onChange={(pagination, filters, sorter) => {
 ![](./screenshots/151603526159_.pic.jpg)
 
 查看在线 demo [https://codesandbox.io/s/async-moon-vjllu?file=/src/App.tsx](https://codesandbox.io/s/async-moon-vjllu?file=/src/App.tsx)
+
+## 从 url 获取参数初始化查询条件
+
+url 参数我们在任何组件都可以拿, 但是消费这些 url 参数的, 是`query`这个 state, 对应到 UI 上, 就有可能是顶部的`SearchForm`, table 里列的 sorter 和 filter, 所以拿 url 参数这个动作, 最好是直接在页面组件里搞也就是现在示例用的 `App.tsx`
+
+这里安装[qs](https://github.com/ljharb/qs)这个库, 用于 url querysring 的解析和序列化
+
+```bash
+yarn add qs
+yarn add -D @types/qs
+```
+
+先写一个函数, 获取最初的查询条件
+
+```tsx
+function getDefaultQuery() {
+  // 先不考虑服务端渲染
+  const urlSearchParams = qs.parse(window.location.search, { ignoreQueryPrefix: true })
+  const { page, pageSize, title, status, order } = urlSearchParams
+  const dto: GetPostsDto = {}
+  if (typeof page === 'string') {
+    dto.page = validIntOrUndefiend(page) || 1
+  }
+  if (typeof pageSize === 'string') {
+    dto.pageSize = validIntOrUndefiend(pageSize) || 20
+  }
+  if (typeof title === 'string') {
+    dto.title = title
+  }
+  if (typeof status === 'string') {
+    dto.status = validIntOrUndefiend(status)
+  }
+  if (typeof order === 'string') {
+    const orderNum = validIntOrUndefiend(order)
+    dto.order = orderNum ? (clamp(orderNum, 0, 1) as 0 | 1) : undefined
+  }
+  return dto
+}
+```
+
+声明多一个叫 `defaultQuery` 的 state, 用`getDefaultQuery`来初始化它
+再用`defaultQuery`来初始化`query`
+
+```tsx
+const [defaultQuery, setDefaultQuery] = React.useState<GetPostsDto>(getInitialQuery)
+const [query, setQuery] = React.useState<GetPostsDto>(defaultQuery)
+```
+
+为什么要加多一个 `defaultQuery` 呢? 因为要把它传给`SearchForm`, 来同步初始化表单的值
+
+```tsx
+;<SearchForm
+  defaultQuery={defaultQuery}
+  //...
+/>
+
+export function SearchForm(props: {
+  onSubmit: (values: FormValues) => any
+  onReset: (values: FormValues) => any
+  defaultQuery?: GetPostsDto
+}) {
+  const { onSubmit, onReset, defaultQuery } = props
+  const [form] = Form.useForm<FormValues>()
+  const handleReset = () => {
+    form.resetFields()
+    onReset({ title: undefined })
+  }
+  React.useEffect(() => {
+    if (!defaultQuery) {
+      return
+    }
+    const { title } = defaultQuery
+    if (title) {
+      form.setFieldsValue({ title })
+    }
+  }, [form, defaultQuery])
+  return (
+    <Form form={form} layout='inline' onFinish={onSubmit}>
+      <Form.Item name='title' label='标题'>
+        <Input placeholder='文章标题' maxLength={10} />
+      </Form.Item>
+      <Button htmlType='submit' type='primary'>
+        搜索
+      </Button>
+      <Button htmlType='button' onClick={handleReset}>
+        重置
+      </Button>
+    </Form>
+  )
+}
+```
+
+对于 filter 和 sorter, antd 的 columns 提供了对应的受控属性, 将它传进去就好了
+
+```tsx
+  {
+    dataIndex: 'status',
+    title: 'status',
+    filters: [
+      { text: '0', value: 0 },
+      { text: '1', value: 1 },
+    ],
+    filterMultiple: false,
+    filteredValue: query.status === undefined ? undefined : [query.status.toString()],
+  },
+  {
+    dataIndex: 'order',
+    title: 'order',
+    sorter: true,
+    sortOrder:
+      query.order === undefined
+        ? undefined
+        : ({ 0: 'ascend', 1: 'descend' } as const)[query.order],
+  },
+```
+
+但是很重要的一点是, **必须将 columns 移入 App 组件内了**, 因为 columns 依赖了 query 这个 state, 必须放进去才能每次都获取最新的 query
+
+### 同步 query 到 url
+
+反向操作, 在 query 每次变化的时候都将其同步到 url
+
+```tsx
+React.useEffect(() => {
+  const { protocol, host, pathname } = window.location
+  const newurl = `${protocol}//${host}${pathname}?${qs.stringify(query)}`
+  window.history.replaceState(null, '', newurl)
+  // query每次变化的时候同步参数到url
+}, [query])
+```
+
+这里直接使用 window.history 的 api, 实际项目里, 比如你用 react-router 的就用 react-router 的 api 就行了
+
+其实这个功能我做得比较少, 除非产品明确要求不然我都是不做...不过做了会对用户会比较友好
+
+查看在线 demo [https://codesandbox.io/s/cool-cookies-y930f?file=/src/App.tsx](https://codesandbox.io/s/cool-cookies-y930f?file=/src/App.tsx)

@@ -1,39 +1,38 @@
 import React from 'react'
 import { Space, Table } from 'antd'
 import { ColumnProps } from 'antd/lib/table'
+import qs from 'qs'
 import './App.css'
 import { Post, getPosts, TableListResponse, GetPostsDto } from './service'
-import { antdPaginationAdapter } from './utils'
+import { antdPaginationAdapter, clamp, validIntOrUndefiend } from './utils'
 import { SearchForm } from './search-form'
 
-const columns: ColumnProps<Post>[] = [
-  { dataIndex: 'id', title: 'id' },
-  { dataIndex: 'title', title: 'title' },
-  { dataIndex: 'content', title: 'content' },
-  {
-    dataIndex: 'status',
-    title: 'status',
-    filters: [
-      { text: '0', value: 0 },
-      { text: '1', value: 1 },
-    ],
-    filterMultiple: false,
-  },
-  { dataIndex: 'order', title: 'order', sorter: true },
-  { dataIndex: 'createdAt', title: 'createdAt', sorter: true },
-  { dataIndex: 'updatedAt', title: 'updatedAt' },
-  {
-    title: '操作',
-    render: () => (
-      <Space>
-        <span>编辑</span>
-        <span style={{ color: 'red' }}>删除</span>
-      </Space>
-    ),
-  },
-]
+function getDefaultQuery() {
+  // 先不考虑服务端渲染
+  const urlSearchParams = qs.parse(window.location.search, { ignoreQueryPrefix: true })
+  const { page, pageSize, title, status, order } = urlSearchParams
+  const dto: GetPostsDto = {}
+  if (typeof page === 'string') {
+    dto.page = validIntOrUndefiend(page) || 1
+  }
+  if (typeof pageSize === 'string') {
+    dto.pageSize = validIntOrUndefiend(pageSize) || 20
+  }
+  if (typeof title === 'string') {
+    dto.title = title
+  }
+  if (typeof status === 'string') {
+    dto.status = validIntOrUndefiend(status)
+  }
+  if (typeof order === 'string') {
+    const orderNum = validIntOrUndefiend(order)
+    dto.order = orderNum ? (clamp(orderNum, 0, 1) as 0 | 1) : undefined
+  }
+  return dto
+}
 function App() {
-  const [query, setQuery] = React.useState<GetPostsDto>({})
+  const [defaultQuery] = React.useState<GetPostsDto>(getDefaultQuery)
+  const [query, setQuery] = React.useState<GetPostsDto>(defaultQuery)
   const [data, setData] = React.useState<TableListResponse<Post>>({
     list: [],
     pagination: {
@@ -43,6 +42,43 @@ function App() {
     },
   })
   const [loading, setLoading] = React.useState(false)
+
+  const columns: ColumnProps<Post>[] = [
+    { dataIndex: 'id', title: 'id' },
+    { dataIndex: 'title', title: 'title' },
+    { dataIndex: 'content', title: 'content' },
+    {
+      dataIndex: 'status',
+      title: 'status',
+      filters: [
+        { text: '0', value: 0 },
+        { text: '1', value: 1 },
+      ],
+      filterMultiple: false,
+      filteredValue: query.status === undefined ? undefined : [query.status.toString()],
+    },
+    {
+      dataIndex: 'order',
+      title: 'order',
+      sorter: true,
+      sortOrder:
+        query.order === undefined
+          ? undefined
+          : ({ 0: 'ascend', 1: 'descend' } as const)[query.order],
+    },
+    { dataIndex: 'createdAt', title: 'createdAt', sorter: true },
+    { dataIndex: 'updatedAt', title: 'updatedAt' },
+    {
+      title: '操作',
+      render: () => (
+        <Space>
+          <span>编辑</span>
+          <span style={{ color: 'red' }}>删除</span>
+        </Space>
+      ),
+    },
+  ]
+
   React.useEffect(() => {
     let isCurrent = true
     setLoading(true)
@@ -56,10 +92,18 @@ function App() {
     // query每次变化的时候都会重新调用接口
   }, [query])
 
+  React.useEffect(() => {
+    const { protocol, host, pathname } = window.location
+    const newurl = `${protocol}//${host}${pathname}?${qs.stringify(query)}`
+    window.history.replaceState(null, '', newurl)
+    // query每次变化的时候同步参数到url
+  }, [query])
+
   return (
     <div>
       <h1>antd table crud</h1>
       <SearchForm
+        defaultQuery={defaultQuery}
         onSubmit={(values) =>
           setQuery((prev) => ({
             ...prev,
