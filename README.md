@@ -365,7 +365,9 @@ yarn add -D @types/qs
 ```tsx
 function getDefaultQuery() {
   // 先不考虑服务端渲染
-  const urlSearchParams = qs.parse(window.location.search, { ignoreQueryPrefix: true })
+  const urlSearchParams = qs.parse(window.location.search, {
+    ignoreQueryPrefix: true,
+  })
   const { page, pageSize, title, status, order } = urlSearchParams
   const dto: GetPostsDto = {}
   if (typeof page === 'string') {
@@ -392,7 +394,9 @@ function getDefaultQuery() {
 再用`defaultQuery`来初始化`query`
 
 ```tsx
-const [defaultQuery, setDefaultQuery] = React.useState<GetPostsDto>(getInitialQuery)
+const [defaultQuery, setDefaultQuery] = React.useState<GetPostsDto>(
+  getInitialQuery
+)
 const [query, setQuery] = React.useState<GetPostsDto>(defaultQuery)
 ```
 
@@ -584,7 +588,12 @@ export function CreatForm(props: {
         >
           <Input.TextArea></Input.TextArea>
         </Form.Item>
-        <Form.Item name='status' label='status' initialValue={PostStatus.Draft} required>
+        <Form.Item
+          name='status'
+          label='status'
+          initialValue={PostStatus.Draft}
+          required
+        >
           <Radio.Group>
             <Radio value={PostStatus.Draft}>draft</Radio>
             <Radio value={PostStatus.Published}>published</Radio>
@@ -673,7 +682,15 @@ export function PostForm(props: {
   onUpdate?: (dto: UpdatePostDto) => void
   record?: Post
 }) {
-  const { visible, onCancel, onCreate, onUpdate, loading, record, title } = props
+  const {
+    visible,
+    onCancel,
+    onCreate,
+    onUpdate,
+    loading,
+    record,
+    title,
+  } = props
   const [form] = Form.useForm<FormValues>()
   const handleSubmit = () => {
     form.validateFields().then((values) => {
@@ -892,3 +909,165 @@ function handleDelete(record: Post, onSuccess: () => void) {
 查看在线 demo, [https://codesandbox.io/s/beautiful-meitner-yu902?file=/src/App.tsx](https://codesandbox.io/s/beautiful-meitner-yu902?file=/src/App.tsx)
 
 我挺喜欢 Modal.confirm 这个语法糖的, 对于这种不需要填表单的操作, 是很方便的
+
+## 批量操作
+
+假设产品跟我们讲, 需要一个批量发布文章的按钮, 那么我们需要一个批量更改文章状态的接口. 假设它叫 `batchUpdatePostsStatus`
+
+类型定义如下:
+
+```tsx
+type BatchUpdatePostsStatusDto = {
+  ids: number[]
+  status: PostStatus
+}
+type BatchUpdatePostsStatus = (dto: BatchUpdatePostsDto) => Promise<void>
+```
+
+其实我们像之前删除那样子搞就好了, 但是为了把事情搞得复杂一点, 产品说在批量发布的时候, 必须需要加上一个备注. 所以我们得像创建和编辑那样, 搞一个弹窗表单了.
+
+`BatchUpdatePostsStatusDto` 的类型更新为
+
+```tsx
+type BatchUpdatePostsStatusDto = {
+  ids: number[]
+  status: PostStatus
+  /** 备注*/
+  remark: string
+}
+```
+
+创建表单
+
+```tsx
+interface FormValues {
+  status: PostStatus
+  remark: string
+}
+export function BatchUpdatePostsStatusForm(props: {
+  visible: boolean
+  loading: boolean
+  records: Post[]
+  onCancel: () => void
+  onSubmit: (dto: BatchUpdatePostsStatusDto) => Promise<void>
+}) {
+  const { visible, onCancel, onSubmit, loading, records } = props
+  const [form] = Form.useForm<FormValues>()
+  const handleSubmit = () => {
+    form.validateFields().then(async (values) => {
+      await onSubmit({
+        ...values,
+        ids: records.map((item) => item.id),
+      } as BatchUpdatePostsStatusDto)
+      // 更新完重置表单
+      form.resetFields()
+    })
+  }
+
+  return (
+    <Modal
+      title='批量更新文章状态'
+      visible={visible}
+      onCancel={onCancel}
+      onOk={handleSubmit}
+      okButtonProps={{ loading }}
+    >
+      <Form form={form} labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
+        <Form.Item
+          name='remark'
+          label='remark'
+          rules={[
+            {
+              required: true,
+              message: 'remark is required',
+            },
+          ]}
+        >
+          <Input.TextArea placeholder='填写备注'></Input.TextArea>
+        </Form.Item>
+        <Form.Item
+          name='status'
+          label='status'
+          required
+          initialValue={PostStatus.Draft}
+        >
+          <Radio.Group>
+            <Radio value={PostStatus.Draft}>draft 0</Radio>
+            <Radio value={PostStatus.Published}>published 1</Radio>
+          </Radio.Group>
+        </Form.Item>
+      </Form>
+    </Modal>
+  )
+}
+```
+
+添加所需要的状态, 包括多选的 row
+
+```tsx
+const [selectedRows, setSelectedRows] = React.useState<Post[]>([])
+const [batchUpdateStatusVisible, setBatchUpdateStatusVisible] = React.useState(
+  false
+)
+const [batchUpdateStatusLoading, setBatchUpdateStatusLoading] = React.useState(
+  false
+)
+```
+
+渲染表单
+
+```tsx
+<BatchUpdatePostsStatusForm
+  // @see https://ant.design/components/form-cn/#FAQ
+  forceRender
+  visible={batchUpdateStatusVisible}
+  records={selectedRows}
+  loading={batchUpdateStatusLoading}
+  onCancel={() => {
+    setBatchUpdateStatusVisible(false)
+    setSelectedRows([])
+  }}
+  onSubmit={async (values: BatchUpdatePostsStatusDto) => {
+    setBatchUpdateStatusLoading(true)
+    try {
+      await batchUpdatePostsStatus(values)
+      message.success('批量编辑成功')
+      // 刷新列表
+      setQuery((prev) => ({
+        ...prev,
+      }))
+      setBatchUpdateStatusVisible(false)
+      setSelectedRows([])
+    } catch (e) {
+      message.error('批量编辑失败')
+    } finally {
+      setBatchUpdateStatusLoading(false)
+    }
+  }}
+/>
+```
+
+绑定事件
+
+```tsx
+ <Button
+  type='primary'
+  disabled={selectedRows.length <= 0}
+  onClick={() => {
+    setBatchUpdateStatusVisible(true)
+  }}
+>
+  批量更新文章状态
+</Button>
+
+<Table
+  rowSelection={{
+    selectedRowKeys: selectedRows.map((item) => item.id),
+    onChange: (_, rows) => setSelectedRows(rows),
+  }}
+/>
+```
+
+好了反正就是来一套, 查看线上 demo,[https://codesandbox.io/s/proud-darkness-96qk2?file=/src/App.tsx](https://codesandbox.io/s/proud-darkness-96qk2?file=/src/App.tsx)
+
+现在 App.tsx 这个文件内容有大概 317 行了, 下一步来看看能不能在写法上优化一下 (不过我觉着还好, 起码挺工整的...)

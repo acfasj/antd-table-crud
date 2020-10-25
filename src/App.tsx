@@ -13,14 +13,19 @@ import {
   UpdatePostDto,
   updatePost,
   deletePost,
+  BatchUpdatePostsStatusDto,
+  batchUpdatePostsStatus,
 } from './service'
 import { antdPaginationAdapter, clamp, validIntOrUndefiend } from './utils'
 import { SearchForm } from './search-form'
 import { PostForm } from './post-form'
+import { BatchUpdatePostsStatusForm } from './batch-update-posts-status-form'
 
 function getDefaultQuery() {
   // 先不考虑服务端渲染
-  const urlSearchParams = qs.parse(window.location.search, { ignoreQueryPrefix: true })
+  const urlSearchParams = qs.parse(window.location.search, {
+    ignoreQueryPrefix: true,
+  })
   const { page, pageSize, title, status, order } = urlSearchParams
   const dto: GetPostsDto = {}
   if (typeof page === 'string') {
@@ -71,11 +76,20 @@ function App() {
   })
   const [loading, setLoading] = React.useState(false)
   const [selectedRecord, setSelectedRecord] = React.useState<Post>()
+  const [selectedRows, setSelectedRows] = React.useState<Post[]>([])
 
   const [createVisible, setCreateVisible] = React.useState(false)
   const [createLoading, setCreateLoading] = React.useState(false)
   const [updateVisible, setUpdateVisible] = React.useState(false)
   const [updateLoading, setUpdateLoading] = React.useState(false)
+  const [
+    batchUpdateStatusVisible,
+    setBatchUpdateStatusVisible,
+  ] = React.useState(false)
+  const [
+    batchUpdateStatusLoading,
+    setBatchUpdateStatusLoading,
+  ] = React.useState(false)
 
   const columns: ColumnProps<Post>[] = [
     { dataIndex: 'id', title: 'id' },
@@ -89,7 +103,8 @@ function App() {
         { text: '1', value: 1 },
       ],
       filterMultiple: false,
-      filteredValue: query.status === undefined ? undefined : [query.status.toString()],
+      filteredValue:
+        query.status === undefined ? undefined : [query.status.toString()],
     },
     {
       dataIndex: 'order',
@@ -123,7 +138,10 @@ function App() {
                   const prevPage = prev.page || 1
                   return {
                     ...prev,
-                    page: data.list.length === 1 ? clamp(prevPage - 1, 1, prevPage) : prevPage,
+                    page:
+                      data.list.length === 1
+                        ? clamp(prevPage - 1, 1, prevPage)
+                        : prevPage,
                   }
                 })
               )
@@ -177,9 +195,21 @@ function App() {
         }
       />
       <div style={{ margin: '15px 0' }}>
-        <Button type='primary' onClick={() => setCreateVisible(true)}>
-          Create
-        </Button>
+        <Space>
+          <Button type='primary' onClick={() => setCreateVisible(true)}>
+            Create
+          </Button>
+
+          <Button
+            type='primary'
+            disabled={selectedRows.length <= 0}
+            onClick={() => {
+              setBatchUpdateStatusVisible(true)
+            }}
+          >
+            批量更新文章状态
+          </Button>
+        </Space>
       </div>
       <Table
         rowKey='id'
@@ -193,12 +223,20 @@ function App() {
             page: pagination.current || 1,
             pageSize: pagination.pageSize || 20,
             status:
-              filters.status && filters.status.length > 0 ? Number(filters.status[0]) : undefined,
+              filters.status && filters.status.length > 0
+                ? Number(filters.status[0])
+                : undefined,
             order:
-              !Array.isArray(sorter) && !!sorter.order && sorter.field === 'order'
+              !Array.isArray(sorter) &&
+              !!sorter.order &&
+              sorter.field === 'order'
                 ? ({ ascend: 0, descend: 1 } as const)[sorter.order]
                 : undefined,
           }))
+        }}
+        rowSelection={{
+          selectedRowKeys: selectedRows.map((item) => item.id),
+          onChange: (_, rows) => setSelectedRows(rows),
         }}
       ></Table>
       <PostForm
@@ -245,6 +283,32 @@ function App() {
         }}
         onCancel={() => setUpdateVisible(false)}
         loading={updateLoading}
+      />
+      <BatchUpdatePostsStatusForm
+        visible={batchUpdateStatusVisible}
+        records={selectedRows}
+        loading={batchUpdateStatusLoading}
+        onCancel={() => {
+          setBatchUpdateStatusVisible(false)
+          setSelectedRows([])
+        }}
+        onSubmit={async (values: BatchUpdatePostsStatusDto) => {
+          setBatchUpdateStatusLoading(true)
+          try {
+            await batchUpdatePostsStatus(values)
+            message.success('批量编辑成功')
+            // 刷新列表
+            setQuery((prev) => ({
+              ...prev,
+            }))
+            setBatchUpdateStatusVisible(false)
+            setSelectedRows([])
+          } catch (e) {
+            message.error('批量编辑失败')
+          } finally {
+            setBatchUpdateStatusLoading(false)
+          }
+        }}
       />
     </div>
   )

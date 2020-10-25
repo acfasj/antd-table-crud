@@ -17,7 +17,15 @@ export function PostForm(props: {
   onUpdate?: (dto: UpdatePostDto) => void
   record?: Post
 }) {
-  const { visible, onCancel, onCreate, onUpdate, loading, record, title } = props
+  const {
+    visible,
+    onCancel,
+    onCreate,
+    onUpdate,
+    loading,
+    record,
+    title,
+  } = props
   const [form] = Form.useForm<FormValues>()
   const handleSubmit = () => {
     form.validateFields().then((values) => {
@@ -45,6 +53,8 @@ export function PostForm(props: {
 
   return (
     <Modal
+      // @see https://ant.design/components/form-cn/#FAQ
+      forceRender
       title={title}
       visible={visible}
       onCancel={onCancel}

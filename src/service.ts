@@ -36,11 +36,14 @@ function delay(timeout?: number) {
   })
 }
 function ceateMockPosts(): Post[] {
-  const len = 201
+  const len = 200
   return new Array(len).fill(0).map((_, index) => ({
     id: len - index,
     title: `post - ${len - index}`,
-    content: 'abcdefghijklmnopqrstuvwxyz'.slice(randomInt(0, 8), randomInt(14, 25)),
+    content: 'abcdefghijklmnopqrstuvwxyz'.slice(
+      randomInt(0, 8),
+      randomInt(14, 25)
+    ),
     status: randomInt(0, 1) as PostStatus,
     order: randomInt(1, 20),
     createdAt: Date.now(),
@@ -77,7 +80,9 @@ function logResponse(...args: any[]) {
   log('=================== Response => ', ...args)
 }
 
-export async function getPosts(dto: GetPostsDto = {}): Promise<TableListResponse<Post>> {
+export async function getPosts(
+  dto: GetPostsDto = {}
+): Promise<TableListResponse<Post>> {
   const { page = 1, pageSize = 20, title, status, order } = dto
   logRequest('getPosts', dto)
   await delay()
@@ -91,7 +96,9 @@ export async function getPosts(dto: GetPostsDto = {}): Promise<TableListResponse
     filteredList = filteredList.filter((item) => item.status === status)
   }
   if (order || order === 0) {
-    filteredList.sort((a, b) => (order === 0 ? a.order - b.order : b.order - a.order))
+    filteredList.sort((a, b) =>
+      order === 0 ? a.order - b.order : b.order - a.order
+    )
   }
   const ret = {
     list: filteredList.slice(start, end),
@@ -142,4 +149,25 @@ export async function updatePost(dto: UpdatePostDto) {
     return item
   })
   logResponse('updatePost')
+}
+
+export type BatchUpdatePostsStatusDto = {
+  ids: number[]
+  status: PostStatus
+  remark: string
+}
+export async function batchUpdatePostsStatus(dto: BatchUpdatePostsStatusDto) {
+  logRequest('batchUpdatePost', dto)
+  await delay()
+  const { ids, status } = dto
+  allPosts = allPosts.map((item) => {
+    if (ids.includes(item.id)) {
+      return {
+        ...item,
+        status,
+      }
+    }
+    return item
+  })
+  logResponse('batchUpdatePost')
 }
