@@ -10,10 +10,12 @@ import {
   GetPostsDto,
   CreatePostDto,
   createPost,
+  UpdatePostDto,
+  updatePost,
 } from './service'
 import { antdPaginationAdapter, clamp, validIntOrUndefiend } from './utils'
 import { SearchForm } from './search-form'
-import { CreateForm } from './create-form'
+import { PostForm } from './post-form'
 
 function getDefaultQuery() {
   // 先不考虑服务端渲染
@@ -50,9 +52,12 @@ function App() {
     },
   })
   const [loading, setLoading] = React.useState(false)
+  const [selectedRecord, setSelectedRecord] = React.useState<Post>()
 
   const [createVisible, setCreateVisible] = React.useState(false)
   const [createLoading, setCreateLoading] = React.useState(false)
+  const [updateVisible, setUpdateVisible] = React.useState(false)
+  const [updateLoading, setUpdateLoading] = React.useState(false)
 
   const columns: ColumnProps<Post>[] = [
     { dataIndex: 'id', title: 'id' },
@@ -81,10 +86,18 @@ function App() {
     { dataIndex: 'updatedAt', title: 'updatedAt' },
     {
       title: '操作',
-      render: () => (
+      render: (_, record) => (
         <Space>
-          <span>编辑</span>
-          <span style={{ color: 'red' }}>删除</span>
+          <span
+            style={{ cursor: 'pointer' }}
+            onClick={() => {
+              setSelectedRecord(record)
+              setUpdateVisible(true)
+            }}
+          >
+            编辑
+          </span>
+          <span style={{ color: 'red', cursor: 'pointer' }}>删除</span>
         </Space>
       ),
     },
@@ -155,7 +168,8 @@ function App() {
           }))
         }}
       ></Table>
-      <CreateForm
+      <PostForm
+        title='Create Post'
         visible={createVisible}
         onCreate={async (values: CreatePostDto) => {
           setCreateLoading(true)
@@ -175,6 +189,29 @@ function App() {
         }}
         onCancel={() => setCreateVisible(false)}
         loading={createLoading}
+      />
+      <PostForm
+        title='Update Post'
+        record={selectedRecord}
+        visible={updateVisible}
+        onUpdate={async (values: UpdatePostDto) => {
+          setUpdateLoading(true)
+          try {
+            await updatePost(values)
+            message.success('编辑成功')
+            // 刷新列表
+            setQuery((prev) => ({
+              ...prev,
+            }))
+            setUpdateVisible(false)
+          } catch (e) {
+            message.error('编辑失败')
+          } finally {
+            setUpdateLoading(false)
+          }
+        }}
+        onCancel={() => setUpdateVisible(false)}
+        loading={updateLoading}
       />
     </div>
   )

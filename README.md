@@ -641,3 +641,184 @@ const [createLoading, setCreateLoading] = React.useState(false)
 查看在线 demo [https://codesandbox.io/s/tender-tu-yw5tx?file=/src/App.tsx](https://codesandbox.io/s/tender-tu-yw5tx?file=/src/App.tsx)
 
 注意我们的接口都是模拟的, 每次刷新页面数据都会重新生成
+
+## Update
+
+接下来就是编辑了, 照样先看接口类型, 我们叫它`updatePost`
+
+```tsx
+type UpdatePostDto = Partial<Post> & { id: number }
+type UpdatePost = (dto: CreatePostDto) => Promise<void>
+```
+
+更新文章 id 是必传的, 其他字段不传就不更新
+
+一般来讲, 我们的创建表单和编辑表单都是可以复用同一个组件的. 同时我们也需要当前编辑的 Post 数据来初始化表单
+
+将`CreateForm`重命名为`PostForm`
+
+```tsx
+interface FormValues {
+  title: string
+  content: string
+  status: PostStatus
+  order: number
+}
+export function PostForm(props: {
+  visible: boolean
+  title: string
+  loading: boolean
+  onCancel: () => void
+  onCreate?: (dto: CreatePostDto) => void
+  onUpdate?: (dto: UpdatePostDto) => void
+  record?: Post
+}) {
+  const { visible, onCancel, onCreate, onUpdate, loading, record, title } = props
+  const [form] = Form.useForm<FormValues>()
+  const handleSubmit = () => {
+    form.validateFields().then((values) => {
+      if (record) {
+        onUpdate &&
+          onUpdate({
+            ...values,
+            id: record.id,
+          } as UpdatePostDto)
+      } else {
+        onCreate && onCreate(values as CreatePostDto)
+      }
+    })
+  }
+
+  // 初始化表单
+  React.useEffect(() => {
+    form.setFieldsValue({
+      title: record?.title,
+      content: record?.content,
+      status: record ? record.status : PostStatus.Draft,
+      order: record?.order || 1,
+    })
+  }, [record, form])
+
+  return (
+    <Modal
+      title={title}
+      visible={visible}
+      onCancel={onCancel}
+      onOk={handleSubmit}
+      okButtonProps={{ loading }}
+    >
+      <Form form={form} labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
+        <Form.Item
+          name='title'
+          label='title'
+          rules={[
+            {
+              required: true,
+              message: 'title is required',
+            },
+          ]}
+        >
+          <Input></Input>
+        </Form.Item>
+        <Form.Item
+          name='content'
+          label='content'
+          rules={[
+            {
+              required: true,
+              message: 'content is required',
+            },
+          ]}
+        >
+          <Input.TextArea></Input.TextArea>
+        </Form.Item>
+        <Form.Item name='status' label='status' required>
+          <Radio.Group>
+            <Radio value={PostStatus.Draft}>draft</Radio>
+            <Radio value={PostStatus.Published}>published</Radio>
+          </Radio.Group>
+        </Form.Item>
+        <Form.Item
+          name='order'
+          label='order'
+          rules={[
+            {
+              required: true,
+              message: 'order is required',
+            },
+          ]}
+        >
+          <InputNumber min={1}></InputNumber>
+        </Form.Item>
+      </Form>
+    </Modal>
+  )
+}
+```
+
+props 的变更: 增加 `onUpdate`, `record`,`title`, 将`onCreate`变成 optional 的
+
+同时注意到, 我们将比表单初始化的工作放在`React.useEffect`来做了, 因为 `Form.Item`的`initialValue`属性和非受控 input 的`defaultValue`一样, 在组件第一次渲染之后就没用了影响不到后续的更新
+
+然后在页面组件里, 照之前的 CreateForm 来一套就好了
+
+```tsx
+<PostForm
+  title='Update Post'
+  record={selectedRecord}
+  visible={updateVisible}
+  onUpdate={async (values: UpdatePostDto) => {
+    setUpdateLoading(true)
+    try {
+      await updatePost(values)
+      message.success('编辑成功')
+      // 刷新列表
+      setQuery((prev) => ({
+        ...prev,
+      }))
+      setUpdateVisible(false)
+    } catch (e) {
+      message.error('编辑失败')
+    } finally {
+      setUpdateLoading(false)
+    }
+  }}
+  onCancel={() => setUpdateVisible(false)}
+  loading={updateLoading}
+/>
+```
+
+注意到这里需要一个 record 属性, 也就是当前编辑的 Post, 我们需要一个声明一个 state 来保存它
+
+```tsx
+const [selectedRecord, setSelectedRecord] = React.useState<Post>()
+```
+
+触发事件的时候:
+
+```tsx
+{
+  title: '操作',
+  render: (_, record) => (
+    <Space>
+      <span
+        style={{ cursor: 'pointer' }}
+        onClick={() => {
+          setSelectedRecord(record)
+          setUpdateVisible(true)
+        }}
+      >
+        编辑
+      </span>
+      <span style={{ color: 'red', cursor: 'pointer' }}>删除</span>
+    </Space>
+  ),
+},
+```
+
+这样就搞定了,查看在线 demo, [https://codesandbox.io/s/happy-haibt-oh1hx?file=/src/App.tsx](https://codesandbox.io/s/happy-haibt-oh1hx?file=/src/App.tsx)
+
+### 编辑的时候需要额外调用接口
+
+这也是个比较常见的需求, 有时候一些额外的字段在表格的 list 接口可能并没有, 需要调用额外的接口去拿. 如果是这种情况的话, 我们的 `PostForm`的 props 一样可以保持不变, 根据传进来的`record`也就是当前 Post 的信息去调用接口, 然后再设置表单的值就可以了
+

@@ -1,23 +1,51 @@
 import React from 'react'
 import { Form, Input, InputNumber, Modal, Radio } from 'antd'
-import { CreatePostDto, PostStatus } from './service'
+import { CreatePostDto, Post, PostStatus, UpdatePostDto } from './service'
 
-export function CreateForm(props: {
+interface FormValues {
+  title: string
+  content: string
+  status: PostStatus
+  order: number
+}
+export function PostForm(props: {
   visible: boolean
-  onCreate: (dto: CreatePostDto) => void
-  onCancel: () => void
+  title: string
   loading: boolean
+  onCancel: () => void
+  onCreate?: (dto: CreatePostDto) => void
+  onUpdate?: (dto: UpdatePostDto) => void
+  record?: Post
 }) {
-  const { visible, onCancel, onCreate, loading } = props
-  const [form] = Form.useForm()
+  const { visible, onCancel, onCreate, onUpdate, loading, record, title } = props
+  const [form] = Form.useForm<FormValues>()
   const handleSubmit = () => {
     form.validateFields().then((values) => {
-      onCreate(values as CreatePostDto)
+      if (record) {
+        onUpdate &&
+          onUpdate({
+            ...values,
+            id: record.id,
+          } as UpdatePostDto)
+      } else {
+        onCreate && onCreate(values as CreatePostDto)
+      }
     })
   }
+
+  // 初始化表单
+  React.useEffect(() => {
+    form.setFieldsValue({
+      title: record?.title,
+      content: record?.content,
+      status: record ? record.status : PostStatus.Draft,
+      order: record?.order || 1,
+    })
+  }, [record, form])
+
   return (
     <Modal
-      title='Create Post'
+      title={title}
       visible={visible}
       onCancel={onCancel}
       onOk={handleSubmit}
@@ -48,7 +76,7 @@ export function CreateForm(props: {
         >
           <Input.TextArea></Input.TextArea>
         </Form.Item>
-        <Form.Item name='status' label='status' initialValue={PostStatus.Draft} required>
+        <Form.Item name='status' label='status' required>
           <Radio.Group>
             <Radio value={PostStatus.Draft}>draft</Radio>
             <Radio value={PostStatus.Published}>published</Radio>
@@ -63,7 +91,6 @@ export function CreateForm(props: {
               message: 'order is required',
             },
           ]}
-          initialValue={1}
         >
           <InputNumber min={1}></InputNumber>
         </Form.Item>

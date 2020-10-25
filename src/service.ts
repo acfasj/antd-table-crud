@@ -79,7 +79,7 @@ function logResponse(...args: any[]) {
 
 export async function getPosts(dto: GetPostsDto = {}): Promise<TableListResponse<Post>> {
   const { page = 1, pageSize = 20, title, status, order } = dto
-  logRequest(dto)
+  logRequest('getPosts', dto)
   await delay()
   const start = (page - 1) * pageSize
   const end = start + pageSize
@@ -101,7 +101,7 @@ export async function getPosts(dto: GetPostsDto = {}): Promise<TableListResponse
       pageSize,
     },
   }
-  logResponse(ret)
+  logResponse('getPosts', ret)
   return ret
 }
 
@@ -111,37 +111,36 @@ export async function getPostById(id: number) {
 }
 
 export async function deletePost(id: number) {
-  logRequest(id)
+  logRequest('deletePost', id)
   await delay()
   const ret = allPosts.filter((item) => item.id !== id)
-  logResponse(ret)
+  logResponse('deletePost', ret)
   return ret
 }
 
 export type CreatePostDto = Omit<Post, 'id' | 'createdAt' | 'updatedAt'>
 export async function createPost(dto: CreatePostDto) {
-  logResponse(dto)
+  logResponse('createPost', dto)
   await delay()
   const id = allPosts[0].id + 1
   allPosts.unshift({ ...dto, id, createdAt: Date.now(), updatedAt: Date.now() })
-  logResponse(allPosts)
+  logResponse('createPost', allPosts)
   return { id }
 }
 
 export type UpdatePostDto = Partial<Post> & { id: number }
 export async function updatePost(dto: UpdatePostDto) {
-  logRequest(dto)
+  logRequest('updatePost', dto)
   await delay()
-  const ret = allPosts.map((item) => {
+  allPosts = allPosts.map((item) => {
     if (item.id === dto.id) {
-      return item
+      return {
+        ...item,
+        // 过滤掉undefined
+        ...JSON.parse(JSON.stringify(dto)),
+      }
     }
-    return {
-      ...item,
-      // 过滤掉undefined
-      ...JSON.parse(JSON.stringify(dto)),
-    }
+    return item
   })
-  logResponse(ret)
-  return ret
+  logResponse('updatePost')
 }
