@@ -1371,3 +1371,58 @@ function usePosts(defaultQuery: GetPostsDto) {
 ```tsx
 const { data, query, setQuery, loading } = usePosts(defaultQuery)
 ```
+
+但是如果是这样的话, 我们的`usePosts`也仅仅只能用于文章的增删改查. 同一个项目里, 接口的数据结构应该是一致的. 再看一下上面的 usePosts, 有类型标注的地方, 已经在提示我们要怎么进行抽象了, 这时候就需要使用泛型了
+
+```tsx
+export function useTableListQuery<
+  Query extends { page?: number; pageSize?: number },
+  Entity
+>(
+  api: (query: Query) => Promise<TableListResponse<Entity>>,
+  defaultQuery: Query
+) {
+  const [query, setQuery] = React.useState<Query>(defaultQuery)
+  const [data, setData] = React.useState<TableListResponse<Entity>>({
+    list: [],
+    pagination: {
+      page: 1,
+      pageSize: 20,
+      total: 0,
+    },
+  })
+  const [loading, setLoading] = React.useState(false)
+
+  React.useEffect(() => {
+    let isCurrent = true
+    setLoading(true)
+    api(query)
+      .then((res) => isCurrent && setData(res))
+      .finally(() => isCurrent && setLoading(false))
+    return () => {
+      // 防止组件已经卸载的时候, 还会对已经卸载的组件setState
+      isCurrent = false
+    }
+    // query每次变化的时候都会重新调用接口
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query])
+
+  return {
+    query,
+    setQuery,
+    data,
+    loading,
+  }
+}
+```
+
+上面这里我们提取了一个叫 `useTableListQuery`的函数, 它接受两个参数: 一个是调用后端接口的函数, 一个是默认的查询参数. 逻辑上和 `usePosts`没有任何区别
+
+然后将 App 组件里的相关代码修改成下面这样就好了👇
+
+```tsx
+const { data, query, setQuery, loading } = useTableListQuery(
+  getPosts,
+  defaultQuery
+)
+```
