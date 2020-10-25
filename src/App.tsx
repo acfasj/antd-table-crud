@@ -20,6 +20,7 @@ import { SearchForm } from './search-form'
 import { PostForm } from './post-form'
 import { BatchUpdatePostsStatusForm } from './batch-update-posts-status-form'
 import { useTableListQuery } from './use-table-list-query'
+import { useStateSyncToUrl } from './use-state-sync-to-url'
 
 function getDefaultQuery() {
   // 先不考虑服务端渲染
@@ -148,12 +149,7 @@ function App() {
     },
   ]
 
-  React.useEffect(() => {
-    const { protocol, host, pathname } = window.location
-    const newurl = `${protocol}//${host}${pathname}?${qs.stringify(query)}`
-    window.history.replaceState(null, '', newurl)
-    // query每次变化的时候同步参数到url
-  }, [query])
+  useStateSyncToUrl(query)
 
   return (
     <div>

@@ -1418,11 +1418,28 @@ export function useTableListQuery<
 
 上面这里我们提取了一个叫 `useTableListQuery`的函数, 它接受两个参数: 一个是调用后端接口的函数, 一个是默认的查询参数. 逻辑上和 `usePosts`没有任何区别
 
-然后将 App 组件里的相关代码修改成下面这样就好了👇
+然后将 App 组件里的相关代码修改成下面这样就好了 👇
 
 ```tsx
 const { data, query, setQuery, loading } = useTableListQuery(
   getPosts,
   defaultQuery
 )
+```
+
+同理, 同步`query`状态到 url 参数这个逻辑也可以提取到外面:
+
+```tsx
+export function useStateSyncToUrl<T>(state: T, options?: qs.IStringifyOptions) {
+  const optionsRef = React.useRef(options)
+  React.useEffect(() => {
+    const { protocol, host, pathname } = window.location
+    const newurl = `${protocol}//${host}${pathname}?${qs.stringify(
+      state,
+      optionsRef.current
+    )}`
+    window.history.replaceState(null, '', newurl)
+    // state每次变化的时候同步参数到url
+  }, [state])
+}
 ```
