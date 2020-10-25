@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button, message, Space, Table } from 'antd'
+import { Button, message, Modal, Space, Table } from 'antd'
 import { ColumnProps } from 'antd/lib/table'
 import qs from 'qs'
 import './App.css'
@@ -12,6 +12,7 @@ import {
   createPost,
   UpdatePostDto,
   updatePost,
+  deletePost,
 } from './service'
 import { antdPaginationAdapter, clamp, validIntOrUndefiend } from './utils'
 import { SearchForm } from './search-form'
@@ -40,6 +41,23 @@ function getDefaultQuery() {
   }
   return dto
 }
+
+function handleDelete(record: Post, onSuccess: () => void) {
+  Modal.confirm({
+    title: 'Delete Post',
+    content: <p>确定删除 {record.title} 吗?</p>,
+    onOk: async () => {
+      try {
+        await deletePost(record.id)
+        message.success('删除成功')
+        onSuccess()
+      } catch (e) {
+        message.error('删除失败')
+      }
+    },
+  })
+}
+
 function App() {
   const [defaultQuery] = React.useState<GetPostsDto>(getDefaultQuery)
   const [query, setQuery] = React.useState<GetPostsDto>(defaultQuery)
@@ -97,7 +115,22 @@ function App() {
           >
             编辑
           </span>
-          <span style={{ color: 'red', cursor: 'pointer' }}>删除</span>
+          <span
+            style={{ color: 'red', cursor: 'pointer' }}
+            onClick={() =>
+              handleDelete(record, () =>
+                setQuery((prev) => {
+                  const prevPage = prev.page || 1
+                  return {
+                    ...prev,
+                    page: data.list.length === 1 ? clamp(prevPage - 1, 1, prevPage) : prevPage,
+                  }
+                })
+              )
+            }
+          >
+            删除
+          </span>
         </Space>
       ),
     },

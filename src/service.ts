@@ -36,7 +36,7 @@ function delay(timeout?: number) {
   })
 }
 function ceateMockPosts(): Post[] {
-  const len = 200
+  const len = 201
   return new Array(len).fill(0).map((_, index) => ({
     id: len - index,
     title: `post - ${len - index}`,
@@ -113,9 +113,8 @@ export async function getPostById(id: number) {
 export async function deletePost(id: number) {
   logRequest('deletePost', id)
   await delay()
-  const ret = allPosts.filter((item) => item.id !== id)
-  logResponse('deletePost', ret)
-  return ret
+  allPosts = allPosts.filter((item) => item.id !== id)
+  logResponse('deletePost')
 }
 
 export type CreatePostDto = Omit<Post, 'id' | 'createdAt' | 'updatedAt'>

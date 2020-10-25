@@ -822,3 +822,73 @@ const [selectedRecord, setSelectedRecord] = React.useState<Post>()
 
 这也是个比较常见的需求, 有时候一些额外的字段在表格的 list 接口可能并没有, 需要调用额外的接口去拿. 如果是这种情况的话, 我们的 `PostForm`的 props 一样可以保持不变, 根据传进来的`record`也就是当前 Post 的信息去调用接口, 然后再设置表单的值就可以了
 
+## Delete
+
+接下来搞删除, 假设我们的接口叫 `deletePost`, 类型如下:
+
+```tsx
+type DeletePost = (id: number) => Promise<void>
+```
+
+删除的话, 这里我们使用 antd 的`Modal.confirm`.   而且这里 onOk 返回一个 Promise 的话可以给按钮加 loading, 这样=我们就不用再声明多一个 loading 状态了
+
+```tsx
+function handleDelete(record: Post, onSuccess: () => void) {
+  Modal.confirm({
+    title: 'Delete Post',
+    content: <p>确定删除 {record.title} 吗?</p>,
+    onOk: async () => {
+      try {
+        await deletePost(record.id)
+        message.success('删除成功')
+        onSuccess()
+      } catch (e) {
+        message.error('删除失败')
+      }
+    },
+  })
+}
+```
+
+事件绑定:
+
+```tsx
+{
+  title: '操作',
+  render: (_, record) => (
+    <Space>
+      <span
+        style={{ cursor: 'pointer' }}
+        onClick={() => {
+          setSelectedRecord(record)
+          setUpdateVisible(true)
+        }}
+      >
+        编辑
+      </span>
+      <span
+        style={{ color: 'red', cursor: 'pointer' }}
+        onClick={() =>
+          handleDelete(record, () =>
+            setQuery((prev) => {
+              const prevPage = prev.page || 1
+              return {
+                ...prev,
+                page: data.list.length === 1 ? clamp(prevPage - 1, 1, prevPage) : prevPage,
+              }
+            })
+          )
+        }
+      >
+        删除
+      </span>
+    </Space>
+  ),
+}
+```
+
+这里有个稍微要注意的地方, 就是当前页面只有最后一条数据了, 如果我们删除了这一条数据还传原来的页码过去, 那么用户看到的就是没数据的页面, 会有点奇怪, 所以把页码减了一页
+
+查看在线 demo, [https://codesandbox.io/s/beautiful-meitner-yu902?file=/src/App.tsx](https://codesandbox.io/s/beautiful-meitner-yu902?file=/src/App.tsx)
+
+我挺喜欢 Modal.confirm 这个语法糖的, 对于这种不需要填表单的操作, 是很方便的
