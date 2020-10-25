@@ -16,7 +16,7 @@ export interface Post {
   updatedAt: number
 }
 /** 文章状态 */
-enum PostStatus {
+export enum PostStatus {
   /** 草稿 */
   Draft = 0,
   /** 已发布 */
@@ -24,7 +24,7 @@ enum PostStatus {
 }
 /** 后端接口 */
 export interface API<Response = unknown> {
-  (...args: any): Promise<Response>
+  (...args: any[]): Promise<Response>
 }
 
 function randomInt(min: number, max: number) {
@@ -36,9 +36,10 @@ function delay(timeout?: number) {
   })
 }
 function ceateMockPosts(): Post[] {
-  return new Array(200).fill(0).map((_, index) => ({
-    id: index + 1,
-    title: `post - ${index + 1}`,
+  const len = 200
+  return new Array(len).fill(0).map((_, index) => ({
+    id: len - index,
+    title: `post - ${len - index}`,
     content: 'abcdefghijklmnopqrstuvwxyz'.slice(randomInt(0, 8), randomInt(14, 25)),
     status: randomInt(0, 1) as PostStatus,
     order: randomInt(1, 20),
@@ -117,12 +118,12 @@ export async function deletePost(id: number) {
   return ret
 }
 
-export type CreatePostDto = Omit<Post, 'id'>
+export type CreatePostDto = Omit<Post, 'id' | 'createdAt' | 'updatedAt'>
 export async function createPost(dto: CreatePostDto) {
   logResponse(dto)
   await delay()
-  const id = allPosts[allPosts.length - 1].id + 1
-  allPosts.push({ ...dto, id })
+  const id = allPosts[0].id + 1
+  allPosts.unshift({ ...dto, id, createdAt: Date.now(), updatedAt: Date.now() })
   logResponse(allPosts)
   return { id }
 }

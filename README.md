@@ -36,7 +36,7 @@ enum PostStatus {
 ```tsx
 /** 后端接口 */
 export interface API<Response = unknown> {
-  (...args: any): Promise<Response>
+  (...args: any[]): Promise<Response>
 }
 ```
 
@@ -484,3 +484,160 @@ React.useEffect(() => {
 其实这个功能我做得比较少, 除非产品明确要求不然我都是不做...不过做了会对用户会比较友好
 
 查看在线 demo [https://codesandbox.io/s/cool-cookies-y930f?file=/src/App.tsx](https://codesandbox.io/s/cool-cookies-y930f?file=/src/App.tsx)
+
+## 弹窗表单
+
+CRUD 中的 Read 已经搞得差不多, 接着看看剩下来的增删改
+
+但是开工前先思考一个问题, 现在增删改就有三个弹窗了, 而且你永远不知道产品会在一个页面下塞下多少个弹窗
+
+假设一个弹窗对应一个 `visible` 的 state 和一个 `Modal`组件, 如果有个 n 个弹窗, 我们是不是要像下面那样写 n 次呢?
+
+```tsx
+function Page() {
+  const [visible1, setVisible1] = React.useState(false)
+  const [visible2, setVisible2] = React.useState(false)
+  const [visible3, setVisible3] = React.useState(false)
+  const [visiblen, setVisiblen] = React.useState(false)
+
+  return (
+    <>
+      <Modal title='Modal1' visible={visible1}></Modal>
+      <Modal title='Modal2' visible={visible2}></Modal>
+      <Modal title='Modal3' visible={visible3}></Modal>
+      <Modal title='Modaln' visible={visible4}></Modal>
+    </>
+  )
+}
+```
+
+如果每个弹窗还都要加上一个 loading 状态等等的话, 那么 Page 里的 state 就太多了
+
+但是没写过的话光这样看是看不出什么鬼来的, 所以还是先写吧
+
+## Create
+
+首先还是要有一个接口啊, 假设我们有一个叫 `createPost` 的接口, 类型定义如下:
+
+```tsx
+type CreatePostDto = {
+  title: string
+  content: string
+  status: PostStatus
+  order: number
+}
+type CreatePost = (
+  dto: CreatePostDto
+) => Promise<{
+  id: number
+}>
+```
+
+根据 [antd 里的文档](https://ant.design/components/form-cn/#components-form-demo-form-in-modal), 一个弹窗的里的新建表单可以这样搞, 那就哐哐哐照抄
+
+创建一个叫 `CreateForm`的组件
+
+```tsx
+export function CreatForm(props: {
+  visible: boolean
+  onCreate: (dto: CreatePostDto) => void
+  onCancel: () => void
+  loading: boolean
+}) {
+  const { visible, onCancel, onCreate, loading } = props
+  const [form] = Form.useForm()
+  const handleSubmit = () => {
+    form.validateFields().then((values) => {
+      onCreate(values as CreatePostDto)
+    })
+  }
+  return (
+    <Modal
+      title='Create Post'
+      visible={visible}
+      onCancel={onCancel}
+      onOk={handleSubmit}
+      okButtonProps={{ loading }}
+    >
+      <Form form={form} labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
+        <Form.Item
+          name='title'
+          label='title'
+          rules={[
+            {
+              required: true,
+              message: 'title is required',
+            },
+          ]}
+        >
+          <Input></Input>
+        </Form.Item>
+        <Form.Item
+          name='content'
+          label='content'
+          rules={[
+            {
+              required: true,
+              message: 'content is required',
+            },
+          ]}
+        >
+          <Input.TextArea></Input.TextArea>
+        </Form.Item>
+        <Form.Item name='status' label='status' initialValue={PostStatus.Draft} required>
+          <Radio.Group>
+            <Radio value={PostStatus.Draft}>draft</Radio>
+            <Radio value={PostStatus.Published}>published</Radio>
+          </Radio.Group>
+        </Form.Item>
+        <Form.Item
+          name='order'
+          label='order'
+          rules={[
+            {
+              required: true,
+              message: 'order is required',
+            },
+          ]}
+          initialValue={1}
+        >
+          <InputNumber min={1}></InputNumber>
+        </Form.Item>
+      </Form>
+    </Modal>
+  )
+}
+```
+
+然后在页面组件引入,并且声明相关状态以及绑定事件
+
+```tsx
+const [createVisible, setCreateVisible] = React.useState(false)
+const [createLoading, setCreateLoading] = React.useState(false)
+//...
+<CreatForm
+  visible={createVisible}
+  onCreate={async (values: CreatePostDto) => {
+    setCreateLoading(true)
+    try {
+      await createPost(values)
+      message.success('创建成功')
+      // 刷新列表
+      setQuery((prev) => ({
+        ...prev,
+      }))
+      setCreateVisible(false)
+    } catch (e) {
+      message.error('创建失败')
+    } finally {
+      setCreateLoading(false)
+    }
+  }}
+  onCancel={() => setCreateVisible(false)}
+  loading={createLoading}
+/>
+```
+
+查看在线 demo [https://codesandbox.io/s/tender-tu-yw5tx?file=/src/App.tsx](https://codesandbox.io/s/tender-tu-yw5tx?file=/src/App.tsx)
+
+注意我们的接口都是模拟的, 每次刷新页面数据都会重新生成

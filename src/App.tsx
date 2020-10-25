@@ -1,11 +1,19 @@
 import React from 'react'
-import { Space, Table } from 'antd'
+import { Button, message, Space, Table } from 'antd'
 import { ColumnProps } from 'antd/lib/table'
 import qs from 'qs'
 import './App.css'
-import { Post, getPosts, TableListResponse, GetPostsDto } from './service'
+import {
+  Post,
+  getPosts,
+  TableListResponse,
+  GetPostsDto,
+  CreatePostDto,
+  createPost,
+} from './service'
 import { antdPaginationAdapter, clamp, validIntOrUndefiend } from './utils'
 import { SearchForm } from './search-form'
+import { CreateForm } from './create-form'
 
 function getDefaultQuery() {
   // 先不考虑服务端渲染
@@ -42,6 +50,9 @@ function App() {
     },
   })
   const [loading, setLoading] = React.useState(false)
+
+  const [createVisible, setCreateVisible] = React.useState(false)
+  const [createLoading, setCreateLoading] = React.useState(false)
 
   const columns: ColumnProps<Post>[] = [
     { dataIndex: 'id', title: 'id' },
@@ -119,6 +130,11 @@ function App() {
           }))
         }
       />
+      <div style={{ margin: '15px 0' }}>
+        <Button type='primary' onClick={() => setCreateVisible(true)}>
+          Create
+        </Button>
+      </div>
       <Table
         rowKey='id'
         dataSource={data.list}
@@ -139,6 +155,27 @@ function App() {
           }))
         }}
       ></Table>
+      <CreateForm
+        visible={createVisible}
+        onCreate={async (values: CreatePostDto) => {
+          setCreateLoading(true)
+          try {
+            await createPost(values)
+            message.success('创建成功')
+            // 刷新列表
+            setQuery((prev) => ({
+              ...prev,
+            }))
+            setCreateVisible(false)
+          } catch (e) {
+            message.error('创建失败')
+          } finally {
+            setCreateLoading(false)
+          }
+        }}
+        onCancel={() => setCreateVisible(false)}
+        loading={createLoading}
+      />
     </div>
   )
 }
