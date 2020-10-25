@@ -63,8 +63,7 @@ function handleDelete(record: Post, onSuccess: () => void) {
   })
 }
 
-function App() {
-  const [defaultQuery] = React.useState<GetPostsDto>(getDefaultQuery)
+function usePosts(defaultQuery: GetPostsDto) {
   const [query, setQuery] = React.useState<GetPostsDto>(defaultQuery)
   const [data, setData] = React.useState<TableListResponse<Post>>({
     list: [],
@@ -75,6 +74,31 @@ function App() {
     },
   })
   const [loading, setLoading] = React.useState(false)
+
+  React.useEffect(() => {
+    let isCurrent = true
+    setLoading(true)
+    getPosts(query)
+      .then((res) => isCurrent && setData(res))
+      .finally(() => isCurrent && setLoading(false))
+    return () => {
+      // 防止组件已经卸载的时候, 还会对已经卸载的组件setState
+      isCurrent = false
+    }
+    // query每次变化的时候都会重新调用接口
+  }, [query])
+
+  return {
+    query,
+    setQuery,
+    data,
+    loading,
+  }
+}
+
+function App() {
+  const [defaultQuery] = React.useState<GetPostsDto>(getDefaultQuery)
+  const { data, query, setQuery, loading } = usePosts(defaultQuery)
   const [selectedRecord, setSelectedRecord] = React.useState<Post>()
   const [selectedRows, setSelectedRows] = React.useState<Post[]>([])
 
@@ -153,19 +177,6 @@ function App() {
       ),
     },
   ]
-
-  React.useEffect(() => {
-    let isCurrent = true
-    setLoading(true)
-    getPosts(query)
-      .then((res) => isCurrent && setData(res))
-      .finally(() => isCurrent && setLoading(false))
-    return () => {
-      // 防止组件已经卸载的时候, 还会对已经卸载的组件setState
-      isCurrent = false
-    }
-    // query每次变化的时候都会重新调用接口
-  }, [query])
 
   React.useEffect(() => {
     const { protocol, host, pathname } = window.location
