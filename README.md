@@ -1444,4 +1444,56 @@ export function useStateSyncToUrl<T>(state: T, options?: qs.IStringifyOptions) {
 }
 ```
 
-查看在线 demo, [https://codesandbox.io/s/infallible-swirles-iweqd?file=/src/use-table-list-query.tsx](https://codesandbox.io/s/infallible-swirles-iweqd?file=/src/use-table-list-query.tsx)
+查看在线 demo, [https://codesandbox.io/s/infallible-swirles-iweqd?file=/src/App.tsx](https://codesandbox.io/s/infallible-swirles-iweqd?file=/src/App.tsx)
+
+## 抽象弹窗表单逻辑
+
+一路写下来我们可以发现, 这些弹窗表单的逻辑都很像:
+点击按钮 -> 弹窗 -> 填写表单 -> 提交接口 -> 接口调用成功 -> 刷新 table 数据, 收起弹窗
+既然套路比较统一了的话, 我觉得是可以也值得抽象的, 当然如果有例外的就特殊处理就好了
+
+### 统一的 visible 和 loading 状态
+
+像弹窗这种交互, 本身就是中断用户的其它操作, 让用户将精力聚焦于弹窗本身, 所以上面的一堆 visible 状态可以统一使用一个
+
+我们有创建, 编辑, 批量更新文章状态这三种业务/操作, 为其定义一个类型
+
+```tsx
+type ModalActionType = '' | 'create' | 'update' | 'batchUpdateStatus'
+```
+
+其中, 空字符串表示不进行任何操作
+
+接着定义相关的 state:
+
+```tsx
+const [modalActionType, setModalActionType] = React.useState<ModalActionType>(
+  ''
+)
+```
+
+这样的话, 判断创建弹窗表单是否展示可以用
+
+```tsx
+visible = {modalActionType === 'create'}
+```
+
+打开创建弹窗表单可以用
+
+```tsx
+setModalActionType('create')
+```
+
+关闭弹窗可以用
+
+```tsx
+setModalActionType('')
+```
+
+编辑和批量更新文章状态同理
+
+接着是 loading, 当然可以按照上面的 visible 那样来搞一遍, 但是我觉着没必要, 直接统一用一个就好了:
+
+```tsx
+const [modalActionLoading, setModalActionLoading] = React.useState(false)
+```

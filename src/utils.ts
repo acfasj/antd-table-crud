@@ -11,7 +11,7 @@ export function antdPaginationAdapter(apiPagination: APIPagination) {
   }
 }
 
-export function validIntOrUndefiend(value: any) {
+export function validIntOrUndefined(value: any) {
   const num = Number.parseInt(value, 10)
   return !Number.isNaN(num) ? num : undefined
 }

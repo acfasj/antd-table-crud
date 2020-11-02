@@ -15,7 +15,7 @@ import {
   BatchUpdatePostsStatusDto,
   batchUpdatePostsStatus,
 } from './service'
-import { antdPaginationAdapter, clamp, validIntOrUndefiend } from './utils'
+import { antdPaginationAdapter, clamp, validIntOrUndefined } from './utils'
 import { SearchForm } from './search-form'
 import { PostForm } from './post-form'
 import { BatchUpdatePostsStatusForm } from './batch-update-posts-status-form'
@@ -30,19 +30,19 @@ function getDefaultQuery() {
   const { page, pageSize, title, status, order } = urlSearchParams
   const dto: GetPostsDto = {}
   if (typeof page === 'string') {
-    dto.page = validIntOrUndefiend(page) || 1
+    dto.page = validIntOrUndefined(page) || 1
   }
   if (typeof pageSize === 'string') {
-    dto.pageSize = validIntOrUndefiend(pageSize) || 20
+    dto.pageSize = validIntOrUndefined(pageSize) || 20
   }
   if (typeof title === 'string') {
     dto.title = title
   }
   if (typeof status === 'string') {
-    dto.status = validIntOrUndefiend(status)
+    dto.status = validIntOrUndefined(status)
   }
   if (typeof order === 'string') {
-    const orderNum = validIntOrUndefiend(order)
+    const orderNum = validIntOrUndefined(order)
     dto.order = orderNum ? (clamp(orderNum, 0, 1) as 0 | 1) : undefined
   }
   return dto
@@ -63,7 +63,7 @@ function handleDelete(record: Post, onSuccess: () => void) {
     },
   })
 }
-
+type ModalActionType = '' | 'create' | 'update' | 'batchUpdateStatus'
 function App() {
   const [defaultQuery] = React.useState<GetPostsDto>(getDefaultQuery)
   const { data, query, setQuery, loading } = useTableListQuery(
@@ -72,19 +72,10 @@ function App() {
   )
   const [selectedRecord, setSelectedRecord] = React.useState<Post>()
   const [selectedRows, setSelectedRows] = React.useState<Post[]>([])
-
-  const [createVisible, setCreateVisible] = React.useState(false)
-  const [createLoading, setCreateLoading] = React.useState(false)
-  const [updateVisible, setUpdateVisible] = React.useState(false)
-  const [updateLoading, setUpdateLoading] = React.useState(false)
-  const [
-    batchUpdateStatusVisible,
-    setBatchUpdateStatusVisible,
-  ] = React.useState(false)
-  const [
-    batchUpdateStatusLoading,
-    setBatchUpdateStatusLoading,
-  ] = React.useState(false)
+  const [modalActionType, setModalActionType] = React.useState<ModalActionType>(
+    ''
+  )
+  const [modalActionLoading, setModalActionLoading] = React.useState(false)
 
   const columns: ColumnProps<Post>[] = [
     { dataIndex: 'id', title: 'id' },
@@ -120,7 +111,7 @@ function App() {
             style={{ cursor: 'pointer' }}
             onClick={() => {
               setSelectedRecord(record)
-              setUpdateVisible(true)
+              setModalActionType('update')
             }}
           >
             编辑
@@ -173,7 +164,7 @@ function App() {
       />
       <div style={{ margin: '15px 0' }}>
         <Space>
-          <Button type='primary' onClick={() => setCreateVisible(true)}>
+          <Button type='primary' onClick={() => setModalActionType('create')}>
             Create
           </Button>
 
@@ -181,7 +172,7 @@ function App() {
             type='primary'
             disabled={selectedRows.length <= 0}
             onClick={() => {
-              setBatchUpdateStatusVisible(true)
+              setModalActionType('')
             }}
           >
             批量更新文章状态
@@ -218,9 +209,9 @@ function App() {
       ></Table>
       <PostForm
         title='Create Post'
-        visible={createVisible}
+        visible={modalActionType === 'create'}
         onCreate={async (values: CreatePostDto) => {
-          setCreateLoading(true)
+          setModalActionLoading(true)
           try {
             await createPost(values)
             message.success('创建成功')
@@ -228,22 +219,22 @@ function App() {
             setQuery((prev) => ({
               ...prev,
             }))
-            setCreateVisible(false)
+            setModalActionType('')
           } catch (e) {
             message.error('创建失败')
           } finally {
-            setCreateLoading(false)
+            setModalActionLoading(false)
           }
         }}
-        onCancel={() => setCreateVisible(false)}
-        loading={createLoading}
+        onCancel={() => setModalActionType('')}
+        loading={modalActionLoading}
       />
       <PostForm
         title='Update Post'
         record={selectedRecord}
-        visible={updateVisible}
+        visible={modalActionType === 'update'}
         onUpdate={async (values: UpdatePostDto) => {
-          setUpdateLoading(true)
+          setModalActionLoading(true)
           try {
             await updatePost(values)
             message.success('编辑成功')
@@ -251,26 +242,26 @@ function App() {
             setQuery((prev) => ({
               ...prev,
             }))
-            setUpdateVisible(false)
+            setModalActionType('')
           } catch (e) {
             message.error('编辑失败')
           } finally {
-            setUpdateLoading(false)
+            setModalActionLoading(false)
           }
         }}
-        onCancel={() => setUpdateVisible(false)}
-        loading={updateLoading}
+        onCancel={() => setModalActionType('')}
+        loading={modalActionLoading}
       />
       <BatchUpdatePostsStatusForm
-        visible={batchUpdateStatusVisible}
+        visible={modalActionType === 'batchUpdateStatus'}
         records={selectedRows}
-        loading={batchUpdateStatusLoading}
+        loading={modalActionLoading}
         onCancel={() => {
-          setBatchUpdateStatusVisible(false)
+          setModalActionType('')
           setSelectedRows([])
         }}
         onSubmit={async (values: BatchUpdatePostsStatusDto) => {
-          setBatchUpdateStatusLoading(true)
+          setModalActionLoading(true)
           try {
             await batchUpdatePostsStatus(values)
             message.success('批量编辑成功')
@@ -278,12 +269,12 @@ function App() {
             setQuery((prev) => ({
               ...prev,
             }))
-            setBatchUpdateStatusVisible(false)
+            setModalActionType('')
             setSelectedRows([])
           } catch (e) {
             message.error('批量编辑失败')
           } finally {
-            setBatchUpdateStatusLoading(false)
+            setModalActionLoading(false)
           }
         }}
       />
