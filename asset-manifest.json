@@ -1,0 +1,25 @@
+{
+  "files": {
+    "main.css": "/antd-table-crud/static/css/main.14a037df.chunk.css",
+    "main.js": "/antd-table-crud/static/js/main.3947d70c.chunk.js",
+    "main.js.map": "/antd-table-crud/static/js/main.3947d70c.chunk.js.map",
+    "runtime-main.js": "/antd-table-crud/static/js/runtime-main.bac6b46f.js",
+    "runtime-main.js.map": "/antd-table-crud/static/js/runtime-main.bac6b46f.js.map",
+    "static/css/2.00a338ba.chunk.css": "/antd-table-crud/static/css/2.00a338ba.chunk.css",
+    "static/js/2.678576d1.chunk.js": "/antd-table-crud/static/js/2.678576d1.chunk.js",
+    "static/js/2.678576d1.chunk.js.map": "/antd-table-crud/static/js/2.678576d1.chunk.js.map",
+    "index.html": "/antd-table-crud/index.html",
+    "precache-manifest.60ae13927357d7472bb44b2b994c69a5.js": "/antd-table-crud/precache-manifest.60ae13927357d7472bb44b2b994c69a5.js",
+    "service-worker.js": "/antd-table-crud/service-worker.js",
+    "static/css/2.00a338ba.chunk.css.map": "/antd-table-crud/static/css/2.00a338ba.chunk.css.map",
+    "static/css/main.14a037df.chunk.css.map": "/antd-table-crud/static/css/main.14a037df.chunk.css.map",
+    "static/js/2.678576d1.chunk.js.LICENSE.txt": "/antd-table-crud/static/js/2.678576d1.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.bac6b46f.js",
+    "static/css/2.00a338ba.chunk.css",
+    "static/js/2.678576d1.chunk.js",
+    "static/css/main.14a037df.chunk.css",
+    "static/js/main.3947d70c.chunk.js"
+  ]
+}
