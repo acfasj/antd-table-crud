@@ -558,10 +558,10 @@ export function CreatForm(props: {
   // 重置表单
   React.useEffect(() => {
     if (!visible) {
-      return;
+      return
     }
-    form.resetFields();
-  }, [visible, form]);
+    form.resetFields()
+  }, [visible, form])
   return (
     <Modal
       title='Create Post'
@@ -1571,5 +1571,35 @@ const modalActionFactory: ModalActionFactory = (options) => {
 
 这样的话, 看起来就会比较统一了, 少写一点模板代码. 坏处就是, 如果碰到一些比较特殊的情况, 这个 modalActionFactory 的封装很可能满足不了, 这种情况的话, 我都是建议直接另外写就好了
 
-查看线上 demo [https://codesandbox.io/s/jolly-euler-q7ft9?file=/src/App.tsx](https://codesandbox.io/s/jolly-euler-q7ft9?file=/src/App.tsx
-)
+查看线上 demo [https://codesandbox.io/s/jolly-euler-q7ft9?file=/src/App.tsx](https://codesandbox.io/s/jolly-euler-q7ft9?file=/src/App.tsx)
+
+## Hooks vs Class Components
+
+可以看到上面的例子, 都是用 hooks 来写的. 都要 2021 了, 不想纠结说用哪个更好了, 哪个下班快就用哪个
+hooks 逻辑复用有优势, class 代码组织上会让人觉得更有条理更工整, 这是我的感受
+如果上面的例子用 class 来写的话, 最关键的点是如何做到:
+
+```tsx
+React.useEffect(() => {
+  let isCurrent = true
+  setLoading(true)
+  api(query)
+    .then((res) => isCurrent && setData(res))
+    .finally(() => isCurrent && setLoading(false))
+  return () => {
+    // 防止组件已经卸载的时候, 还会对已经卸载的组件setState
+    isCurrent = false
+  }
+  // query每次变化的时候都会重新调用接口
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [query])
+```
+
+我能想到的有两个:
+
+1. `componentDidMount + componentDidUpdate`
+2. `this.setState({ query }, () => api.then(() => {/** logic */}))`
+
+其次是, 如果用 class 写, 我基本不会想去提取`use-table-list-query`这样的逻辑, 宁愿在每一个页面都写一次. 因为提取这样的逻辑的话, 很大可能就是用 hoc, hoc 套来套去的, 不太想用
+
+hooks 直接 use 会直观很多, 但是如果 use 得多了, 或者函数组件内部定义了大量的 const xxx = yyy 之类的变量/子函数, 代码结构上看起来也会感觉挺乱的. 反正还是那句话, 哪个下班快就用哪个
