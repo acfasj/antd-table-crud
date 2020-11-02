@@ -555,6 +555,13 @@ export function CreatForm(props: {
       onCreate(values as CreatePostDto)
     })
   }
+  // 重置表单
+  React.useEffect(() => {
+    if (!visible) {
+      return;
+    }
+    form.resetFields();
+  }, [visible, form]);
   return (
     <Modal
       title='Create Post'
