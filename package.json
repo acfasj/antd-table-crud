@@ -1,6 +1,7 @@
 {
   "name": "antd-table-crud",
   "version": "0.1.0",
+  "homepage": "antd-table-crud",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^4.2.4",
