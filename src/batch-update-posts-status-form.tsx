@@ -21,10 +21,15 @@ export function BatchUpdatePostsStatusForm(props: {
         ...values,
         ids: records.map((item) => item.id),
       } as BatchUpdatePostsStatusDto)
-      // 更新完重置表单
-      form.resetFields()
     })
   }
+  // 重置表单
+  React.useEffect(() => {
+    if (!visible) {
+      return
+    }
+    form.resetFields()
+  }, [visible, form])
 
   return (
     <Modal

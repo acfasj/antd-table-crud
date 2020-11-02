@@ -7,12 +7,9 @@ import {
   Post,
   getPosts,
   GetPostsDto,
-  CreatePostDto,
   createPost,
-  UpdatePostDto,
   updatePost,
   deletePost,
-  BatchUpdatePostsStatusDto,
   batchUpdatePostsStatus,
 } from './service'
 import { antdPaginationAdapter, clamp, validIntOrUndefined } from './utils'
@@ -64,6 +61,13 @@ function handleDelete(record: Post, onSuccess: () => void) {
   })
 }
 type ModalActionType = '' | 'create' | 'update' | 'batchUpdateStatus'
+type ModalActionFactory = <
+  API extends (...args: any[]) => Promise<unknown>
+>(options: {
+  api: API
+  successMessage?: string
+  errorMessage?: string
+}) => (...args: Parameters<API>) => Promise<void>
 function App() {
   const [defaultQuery] = React.useState<GetPostsDto>(getDefaultQuery)
   const { data, query, setQuery, loading } = useTableListQuery(
@@ -76,6 +80,37 @@ function App() {
     ''
   )
   const [modalActionLoading, setModalActionLoading] = React.useState(false)
+  const clean = () => {
+    setSelectedRecord(undefined)
+    setSelectedRows([])
+  }
+  const handleModalCancel = () => {
+    setModalActionType('')
+    clean()
+  }
+  const modalActionFactory: ModalActionFactory = (options) => {
+    const {
+      api,
+      successMessage = '操作成功',
+      errorMessage = '操作失败',
+    } = options
+    return async (...args: any[]) => {
+      setModalActionLoading(true)
+      try {
+        await api(...args)
+        message.success(successMessage)
+        // 刷新列表
+        setQuery((prev) => ({
+          ...prev,
+        }))
+        handleModalCancel()
+      } catch (e) {
+        message.error(errorMessage)
+      } finally {
+        setModalActionLoading(false)
+      }
+    }
+  }
 
   const columns: ColumnProps<Post>[] = [
     { dataIndex: 'id', title: 'id' },
@@ -172,7 +207,7 @@ function App() {
             type='primary'
             disabled={selectedRows.length <= 0}
             onClick={() => {
-              setModalActionType('')
+              setModalActionType('batchUpdateStatus')
             }}
           >
             批量更新文章状态
@@ -210,73 +245,36 @@ function App() {
       <PostForm
         title='Create Post'
         visible={modalActionType === 'create'}
-        onCreate={async (values: CreatePostDto) => {
-          setModalActionLoading(true)
-          try {
-            await createPost(values)
-            message.success('创建成功')
-            // 刷新列表
-            setQuery((prev) => ({
-              ...prev,
-            }))
-            setModalActionType('')
-          } catch (e) {
-            message.error('创建失败')
-          } finally {
-            setModalActionLoading(false)
-          }
-        }}
-        onCancel={() => setModalActionType('')}
+        onCreate={modalActionFactory({
+          api: createPost,
+          successMessage: '创建成功',
+          errorMessage: '创建失败',
+        })}
+        onCancel={handleModalCancel}
         loading={modalActionLoading}
       />
       <PostForm
         title='Update Post'
         record={selectedRecord}
         visible={modalActionType === 'update'}
-        onUpdate={async (values: UpdatePostDto) => {
-          setModalActionLoading(true)
-          try {
-            await updatePost(values)
-            message.success('编辑成功')
-            // 刷新列表
-            setQuery((prev) => ({
-              ...prev,
-            }))
-            setModalActionType('')
-          } catch (e) {
-            message.error('编辑失败')
-          } finally {
-            setModalActionLoading(false)
-          }
-        }}
-        onCancel={() => setModalActionType('')}
+        onUpdate={modalActionFactory({
+          api: updatePost,
+          successMessage: '编辑成功',
+          errorMessage: '编辑失败',
+        })}
+        onCancel={handleModalCancel}
         loading={modalActionLoading}
       />
       <BatchUpdatePostsStatusForm
         visible={modalActionType === 'batchUpdateStatus'}
         records={selectedRows}
         loading={modalActionLoading}
-        onCancel={() => {
-          setModalActionType('')
-          setSelectedRows([])
-        }}
-        onSubmit={async (values: BatchUpdatePostsStatusDto) => {
-          setModalActionLoading(true)
-          try {
-            await batchUpdatePostsStatus(values)
-            message.success('批量编辑成功')
-            // 刷新列表
-            setQuery((prev) => ({
-              ...prev,
-            }))
-            setModalActionType('')
-            setSelectedRows([])
-          } catch (e) {
-            message.error('批量编辑失败')
-          } finally {
-            setModalActionLoading(false)
-          }
-        }}
+        onCancel={handleModalCancel}
+        onSubmit={modalActionFactory({
+          api: batchUpdatePostsStatus,
+          successMessage: '批量编辑成功',
+          errorMessage: '批量编辑失败',
+        })}
       />
     </div>
   )

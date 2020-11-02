@@ -43,13 +43,16 @@ export function PostForm(props: {
 
   // 初始化表单
   React.useEffect(() => {
+    if (!visible) {
+      return
+    }
     form.setFieldsValue({
       title: record?.title,
       content: record?.content,
       status: record ? record.status : PostStatus.Draft,
       order: record?.order || 1,
     })
-  }, [record, form])
+  }, [record, form, visible])
 
   return (
     <Modal

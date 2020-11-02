@@ -1497,3 +1497,72 @@ setModalActionType('')
 ```tsx
 const [modalActionLoading, setModalActionLoading] = React.useState(false)
 ```
+
+### 确定, 取消按钮的事件绑定
+
+来看看确定按钮的事件绑定, 最主要的区别还是调用的接口的不同; 其次是接口成功之后的操作可能不同, 比如有多选表格的, 要把这个多选记录清掉
+我们可以尝试来写一个工厂函数, 统一不变的, 可变的用参数传递
+
+```tsx
+type ModalActionFactory = <
+  API extends (...args: any[]) => Promise<unknown>
+>(options: {
+  api: API
+  successMessage?: string
+  errorMessage?: string
+}) => (...args: Parameters<API>) => Promise<void>
+
+const clean = () => {
+  setSelectedRecord(undefined)
+  setSelectedRows([])
+}
+const handleModalCancel = () => {
+  setModalActionType('')
+  clean()
+}
+const modalActionFactory: ModalActionFactory = (options) => {
+  const {
+    api,
+    successMessage = '操作成功',
+    errorMessage = '操作失败',
+  } = options
+  return async (...args: any[]) => {
+    setModalActionLoading(true)
+    try {
+      await api(args)
+      message.success(successMessage)
+      // 刷新列表
+      setQuery((prev) => ({
+        ...prev,
+      }))
+      handleModalCancel()
+    } catch (e) {
+      message.error(errorMessage)
+    } finally {
+      setModalActionLoading(false)
+    }
+  }
+}
+```
+
+如上所示, modalActionFactory 接收接口 api 的参数等, 返回了一个函数, 这个函数被添加了接口调用成功和失败以后的处理逻辑,
+这样, 组件里就可以这样写:
+
+```tsx
+<PostForm
+  title='Create Post'
+  visible={modalActionType === 'create'}
+  onCreate={modalActionFactory({
+    api: createPost,
+    successMessage: '创建成功',
+    errorMessage: '创建失败',
+  })}
+  onCancel={handleModalCancel}
+  loading={modalActionLoading}
+/>
+```
+
+这样的话, 看起来就会比较统一了, 少写一点模板代码. 坏处就是, 如果碰到一些比较特殊的情况, 这个 modalActionFactory 的封装很可能满足不了, 这种情况的话, 我都是建议直接另外写就好了
+
+查看线上 demo [https://codesandbox.io/s/jolly-euler-q7ft9?file=/src/App.tsx](https://codesandbox.io/s/jolly-euler-q7ft9?file=/src/App.tsx
+)
