@@ -1,6 +1,6 @@
 做了蛮多的后台管理页面, 几乎都是 table+弹窗表单. 所以总结一下自己 CRUD 的套路
 
-假设这次要做一个关于文章 Post 的增删改查的需求
+假设这次要做一个关于文章 Post 的增删改查的需求. 可以先查看最终的 [demo 示例](https://acfasj.github.io/antd-table-crud) 来看看效果
 
 ## 类型定义
 
@@ -1609,3 +1609,11 @@ React.useEffect(() => {
 其次是, 如果用 class 写, 我基本不会想去提取`use-table-list-query`这样的逻辑, 宁愿在每一个页面都写一次. 因为提取这样的逻辑的话, 很大可能就是用 hoc, hoc 套来套去的, 不太想用
 
 hooks 直接 use 会直观很多, 但是如果 use 得多了, 或者函数组件内部定义了大量的 const xxx = yyy 之类的变量/子函数, 代码结构上看起来也会感觉挺乱的. 反正还是那句话, 哪个下班快就用哪个
+
+## 参考
+
+- https://ant.design/index-cn
+- https://pro.ant.design/index-cn
+- https://reactjs.org/docs/hooks-intro.html
+- https://ahooks.js.org/
+- https://cmichel.medium.com/how-to-deploy-a-create-react-app-with-github-actions-5e01f7a7b6b
