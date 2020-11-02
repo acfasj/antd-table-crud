@@ -4,6 +4,8 @@
 
 ## 类型定义
 
+这里的示例使用 typescript 3.7
+
 ```tsx
 /** 文章 */
 export interface Post {
@@ -64,6 +66,8 @@ export interface TableListResponse<T = unknown> {
 // getPosts 的类型
 type GetPosts = (dto?: GetPostsDto) => Promise<TableListResponse<Post>>
 ```
+
+其中 DTO, 这个词语的解释可以参考 [Data Transfer Object](https://en.wikipedia.org/wiki/Data_transfer_object), 我是因为看了 [nestjs](https://docs.nestjs.com/controllers#request-payloads) 的文档才用的
 
 接口有了就可以写页面了
 
@@ -261,9 +265,9 @@ onChange={(pagination) => {
 
 - 像谷歌的搜索框, 我试了最多只能输入 2048 个字符, 因为它会把这个搜索的字符串加到 url 里, url 显然是有长度限制的(具体看实现), 所以也很合理.B 站的搜索框也做了类似的处理, 但是限制在了 100 个字符
 - 阿里云的用户中心里, 对于订单号这个 input, 前端并没有做长度上的校验/过滤, 而是直接丢给后端, 然后后管返回系统异常前端弹窗提示
-- 我平时的工作里, 后台管理系统中, 产品要求直接崩掉这次操作, 给用户提示字符过长之类的
+- 我平时的工作里, 后台管理系统中, 写过直接崩掉用户的这次操作, 给用户提示字符过长之类的
 
-个人来看的话, 我觉得直接过滤掉用户的输入/限制用户的输入, 但是不崩掉用户的请求会比较好. 比如说 “输入框输入 n 个字符串就不能再输入”, “数字 id 输入框就只能输入数字”, “antd 的 InputNumber 可以输入别的字符, 但是 blur 或者提交的时候会清掉”, “合理的情况下使用可以选择的控件而不是输入框(Select, Picker, 带搜索的 Select 等)”.
+个人来看的话, 我觉得直接限制用户的输入会比较好. 例如: “输入框输入 n 个字符串就不能再输入”, “数字 id 输入框就只能输入数字”, “合理的情况下使用可以选择的控件而不是输入框(Select, Picker, 带搜索的 Select 等)”. 而不是说等用户进行了非法的输入以后, 才去做校验给用户标红提示或者弹信息提示
 
 ### 输入了, 但是没有点击搜索
 
@@ -290,7 +294,7 @@ export interface GetPostsDto {
 }
 ```
 
-可以看到, 对于接口来说 , 没有什么不同的, 就是加了两个字段而已; 那么对于前端来讲, 也没什么不同的, 就是搜索参数来自于不同的 UI 控件而已, 对于到代码还是那一句 `setQuery`
+可以看到, 对于接口来说, 没有什么不同的, 就是加了两个字段而已; 那么对于前端来讲, 也没什么不同的, 就是搜索参数来自于不同的 UI 控件而已, 对于到代码还是那一句 `setQuery`
 
 更新 columns status 那一栏
 
@@ -1576,7 +1580,9 @@ const modalActionFactory: ModalActionFactory = (options) => {
 ## Hooks vs Class Components
 
 可以看到上面的例子, 都是用 hooks 来写的. 都要 2021 了, 不想纠结说用哪个更好了, 哪个下班快就用哪个
+
 hooks 逻辑复用有优势, class 代码组织上会让人觉得更有条理更工整, 这是我的感受
+
 如果上面的例子用 class 来写的话, 最关键的点是如何做到:
 
 ```tsx
